@@ -1,6 +1,6 @@
 ########################################################
 # Writing Sample
-# TIMSS 2011 Mathematics analysis
+# TIMSS 2011 8th Grade Mathematics Analysis
 # Scarlett Escudero
 # PhD Application
 # Date (version): 2024/November
@@ -47,10 +47,6 @@ southaf <- southaf %>%
 
 southaf <- southaf %>% arrange(IDBOOK) #Total 859 individuals
 vis_miss(southaf)
-
-#southaf <- southaf %>%
-#  filter(rowSums(is.na(select(., 4:ncol(.)))) < ncol(select(., 4:ncol(.)))) #After eliminating people with all NA: 1705 individuals
-
 dim(southaf)
 
 ######################
@@ -100,9 +96,6 @@ canada_alb <- canada_alb %>%
 canada <- rbind(canada_alb,canada_ont,canada_que)
 canada <- canada %>% arrange(IDBOOK) #Total 1118 individuals
 vis_miss(canada)
-
-#canada <- canada %>%
-#  filter(rowSums(is.na(select(., 4:ncol(.)))) < ncol(select(., 4:ncol(.)))) #After eliminating people with all NA: 2229 individuals
 
 ######################
 # Complete dataset   #
@@ -621,10 +614,12 @@ m.final <- multipleGroup(data = data_com_Book5_resp_uni,
   invariance = c('free_means', 'free_var', LRT.no_DIF))
 
 # Plots for items with DIF
+png("DIFitems.png", width = 12, height = 8, res = 600, units = "in")
 plot(x = m.final,
   type = "trace",
   which.items = which(TableDIF.LRT$tipo == "DIF"),
   facet_items = TRUE)
+dev.off()
 
 # Plots for items without DIF
 plot(x = m.final,
@@ -652,85 +647,7 @@ TableDIF.LRT$favor <- ifelse(TableDIF.LRT$mean.ES.foc == TableDIF.LRT$mean.ES.re
 order(abs(TableDIF.LRT$ESSD),decreasing="TRUE")
 TableDIF.LRT[order(abs(TableDIF.LRT$ESSD),decreasing="TRUE"),]
 
-##################################################
-# Logistic regression with Lordif 
-##################################################
-out.DIF.RL <- difLogistic(Data = data_com_Book5_resp_uni, 
-  group = groupCM,  
-  focal.name = "2", 
-  purify = TRUE, 
-  type = "both",
-  nrIter = 20,
-  p.adjust.method = "BH")
-out.DIF.RL
-plot(out.DIF.RL)
-RL.conDIF <- names(data_com_Book5_resp_uni)[which(out.DIF.RL$adjusted.p < .05)]
-RL.no_DIF <- names(data_com_Book5_resp_uni)[!(names(data_com_Book5_resp_uni)) %in% RL.conDIF]
-
-score <- apply(data_com_Book5_resp_uni[,RL.no_DIF],1,sum)
-
-# Contraste de DIF no uniforme:
-out.DIF.RL.nudif <- difLogistic(Data=data_com_Book5_resp_uni, 
-  group = groupCM, 
-  match = score,
-  focal.name = "2",
-  type ="nudif", 
-  p.adjust.method = "BH")
-out.DIF.RL.nudif
-# Contraste de DIF uniforme:
-out.DIF.RL.udif <- difLogistic(Data=data_com_Book5_resp_uni, 
-  group = groupCM, 
-  match = score,
-  focal.name = "2",
-  type ="udif", 
-  p.adjust.method = "BH");out.DIF.RL.udif
-
-TableDIF.RL <- as.data.frame(list(chi = round(out.DIF.RL$Logistik,3),
-  df = rep(2,length(out.DIF.RL$Logistik)),
-  p  = round(out.DIF.RL$adjusted.p,3),
-  R2 = round(out.DIF.RL$deltaR2,4),
-  size = ifelse(out.DIF.RL$deltaR2 <  .035,"A",
-    ifelse(out.DIF.RL$deltaR2 >  .070,"C","B")),
-  tipo = ifelse(out.DIF.RL$adjusted.p > .05, "no DIF",
-    ifelse(out.DIF.RL.nudif$adjusted.p <= .05,"nuDIF",
-      ifelse(out.DIF.RL.udif$adjusted.p  <= .05, "uDIF", "?"))),
-  favor = ifelse(out.DIF.RL$adjusted.p > .05," ",
-    ifelse(out.DIF.RL.udif$logitPar[,"GROUP"] > 0 ,"F", 
-      ifelse(out.DIF.RL.udif$logitPar[,"GROUP"] < 0 ,"R", " "))), 
-  row.names = names(data_com_Book5_resp_uni)))
-TableDIF.RL
-
-order(TableDIF.RL$R2,decreasing = TRUE)
-TableDIF.RL[order(TableDIF.RL$R2,decreasing = TRUE),]
-
-##################################################
-# Mantel-Haenzel
-##################################################
-out.DIF.MH <- difMH(Data = data_com_Book5_resp_uni, 
-  group = groupCM, 
-  focal.name = "2",
-  purify = TRUE, 
-  nrIter = 20,
-  p.adjust.method = "BH"); out.DIF.MH
-plot(out.DIF.MH)
-
-MH.withDIF <- names(data_com_Book5_resp_uni)[which(out.DIF.MH$adjusted.p < .05)]
-TableDIF.MH <-  as.data.frame(list(chi = round(out.DIF.MH$MH,3),
-  p  = round(out.DIF.MH$adjusted.p,3),
-  DeltaMH = round(-2.35*log(out.DIF.MH$alphaMH),4),
-  favor = ifelse(out.DIF.MH$adjusted.p > .05, " ",
-    ifelse(sign(-2.35*log(out.DIF.MH$alphaMH))==1,"F",
-      "R")),
-  size  = ifelse(out.DIF.MH$adjusted.p > .05, " ",
-    ifelse(abs(-2.35*log(out.DIF.MH$alphaMH)) < 1, "A",
-      ifelse(abs(-2.35*log(out.DIF.MH$alphaMH))> 1.5,"C",
-        "B")))),
-  row.names = names(data_com_Book5_resp_uni))
-TableDIF.MH
-
-
 #===============================================================================
 # Save
 #===============================================================================
 save(list = ls(), file = "DataAn_TIMSS2011.RData")
-
